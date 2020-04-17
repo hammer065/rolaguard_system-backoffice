@@ -1,0 +1,8 @@
+# to exclude files and directories to be copied to the container
+tmp
+README.*
+.git
+Dockerfile
+.dockerignore
+*.y*l
+database.ini

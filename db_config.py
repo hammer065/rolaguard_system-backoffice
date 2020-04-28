@@ -7,6 +7,7 @@ def config(filename='database.ini', section='postgresql'):
   if "DB_NAME" in os.environ:
     print('getting db settings from environment variables')
     db['host'] = os.environ['DB_HOST']
+    db['port'] = os.environ['DB_PORT']
     db['database'] = os.environ['DB_NAME']
     db['user'] = os.environ['DB_USERNAME']
     db['password'] = os.environ['DB_PASSWORD']

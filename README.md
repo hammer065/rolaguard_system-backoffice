@@ -1,29 +1,25 @@
 # RoLaGuard Community Edition
 
-## system-backoffice
+## System Backoffice
+This repository contains the source code of system-backoffice. This module it is used for system maintenance of the database, and also to schedule jobs.
 
-This repository contains the source code of the RoLaGuard system-backoffice. This component is the responsible of the running some programated jobs in the database
+To access the main project with instructions to easily run the rolaguard locally visit the [Rolaguard](./../README.md) repository. 
+For contributions, please visit the [CONTRIBUTIONS](./../CONTRIBUTING.MD) file.
 
-To access the main project with instructions to easily run the rolaguard locally visit the [RoLaGuard](https://github.com/Argeniss-Software/rolaguard) repository. For contributions, please visit the [CONTRIBUTIONS](https://github.com/Argeniss-Software/rolaguard/blob/master/CONTRIBUTIONS.md) file
+### How to use it locally
 
-### Building the docker image
-
-To build the docker image locally:
-
-```bash
-docker build -t loraguard-system-backoffice .
+Build a docker image locally:
+```
+docker build -t rolaguard-system-backoffice .
 ```
 
-To test docker image locally:
-
+Test docker image locally:
 - passing sql script file to run as arg:
-
-```bash
-docker run loraguard-system-backoffice python pg_admin.py scripts/sql/test.sql
+```
+docker run rolaguard-system-backoffice python pg_admin.py scripts/sql/db_health_status.sql
 ```
 
 - setting env var before call a py script:
-
-```bash
-docker run loraguard-system-backoffice /bin/sh -c "export TABLE_NAME=packet && export DB_HOST=xxx.rolaguard.com && export DB_NAME=xxx_development && export DB_USERNAME=xxx_admin && export DB_PASSWORD='xxx_.!mnsjd)!bX63W6ap?0w2kejB>whw7H37a(' && python pg_admin.py scripts/sql/db_health_status.sql"
+```
+docker run rolaguard-system-backoffice /bin/sh -c "export DB_HOST=localhost.rolaguard && export DB_NAME=rolaguard_local && export DB_USERNAME=postgres && export DB_PASSWORD=post_gres && python pg_admin.py scripts/sql/db_health_status.sql"
  ```

@@ -27,7 +27,6 @@ into unq_alerts_to_remove
 from alert a
 where a.id in (select id from alerts_id);
 
-
 -- Modify some fields of the copy of the alerts
 update unq_alerts_to_remove atr
 set type = 'LAF-600',
@@ -47,6 +46,6 @@ insert into alert (type, created_at, packet_id, device_id, device_session_id, ga
 	select type, created_at, packet_id, device_id, device_session_id, gateway_id, device_auth_id,
 				   data_collector_id, parameters, resolved_at, resolved_by_id, resolution_comment, show
 	from unq_alerts_to_remove;
-	
+
 -- Clean temp tables
 drop table if exists unq_to_remove, unq_alerts_to_remove;

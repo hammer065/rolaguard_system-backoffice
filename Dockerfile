@@ -8,7 +8,7 @@ ARG WORK_DIR="/iot_home"
 WORKDIR ${WORK_DIR}
 
 # Copy requirements file to install dependencies
-# Docker’s layer caching and skips installing Python requirements if the requirements.txt file does not change
+# Dockers layer caching and skips installing Python requirements if the requirements.txt file does not change
 COPY requirements.txt ${WORK_DIR}
 
 # Install any needed packages specified in requirements.txt
@@ -17,7 +17,9 @@ RUN apt-get update \
   && pip install --no-cache-dir --trusted-host pypi.python.org -r requirements.txt \
   && find /usr/local/ \( -type d -a -name test -o -name tests \) -o \( -type f -a -name '*.pyc' -o -name '*.pyo' \) -delete
 
-# Copy the current directory contents into the container at /app
+RUN apt-get update && apt-get install -y cron
+
+# Copy the current directory contents into the container at /iot_home
 COPY . ${WORK_DIR}
 
 # Define environment variable

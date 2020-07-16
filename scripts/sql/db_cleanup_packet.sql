@@ -18,7 +18,7 @@ set maintenance_work_mem='2 GB';
 
 show maintenance_work_mem;
 
-SET lock_timeout TO '2s';
+SET lock_timeout TO '30min';
 
 vacuum (verbose, full) packet;
 

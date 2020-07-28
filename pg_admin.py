@@ -71,7 +71,7 @@ def connect():
         cur.close()
 
     except (Exception, psycopg2.DatabaseError) as error:
-        print('error: ' % error)
+        print(f'error: {error}')
     finally:
         if conn is not None:
             conn.close()

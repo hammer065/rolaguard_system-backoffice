@@ -11,9 +11,6 @@ where q.resolved_at is null
   and atype.quarantine_timeout > 0
   and q.last_checked+atype.quarantine_timeout * interval '1 second' < current_timestamp;
 
--- Quarantines resolved
-select count(*) from unq_to_remove
-
 -- Resolve the quarantines
 update quarantine
 set resolved_at = current_timestamp,

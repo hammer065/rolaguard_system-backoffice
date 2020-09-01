@@ -7,10 +7,11 @@ drop table if exists gw_to_disconnect, dv_to_disconnect, created_alerts;
 --      usual period, where disconnection_sensitivity is a configurable policy parameter
 -- 1) Get gateways to disconnect and the data needed to create the corresponding alerts
 SELECT
+    DISTINCT ON (g.id, dc.id)
     g.id as gateway_id,
     dc.id as data_collector_id,
     pitem.alert_type_code as alert_type,
-    pitem.enabled as alert_enabled,
+    (pitem.enabled and dc.deleted_at is null and dc.status = 'CONNECTED'::datacollectorstatus) as should_create_alert,
     true as show,
     now() as created_at,
     -1 as packet_id,
@@ -35,7 +36,7 @@ WHERE g.connected and pitem.parameters::jsonb ? 'disconnection_sensitivity' and
 INSERT INTO alert (type, created_at, packet_id, gateway_id, data_collector_id, parameters, show)
 SELECT alert_type, created_at, packet_id, gateway_id, data_collector_id, parameters, show
 FROM gw_to_disconnect
-WHERE alert_enabled
+WHERE should_create_alert
 
 -- 3) Disconnect the corresponding gateways
 UPDATE gateway
@@ -48,11 +49,12 @@ WHERE id in (select gateway_id from gw_to_disconnect)
 --      usual period, where disconnection_sensitivity is a configurable policy parameter
 -- 1) Get devices to disconnect and the data needed to create the corresponding alerts
 SELECT
+    DISTINCT ON (d.id, dc.id)
     d.id as device_id,
     d.organization_id as organization_id,
     dc.id as data_collector_id,
     pitem.alert_type_code as alert_type,
-    pitem.enabled as alert_enabled,
+    (pitem.enabled and dc.deleted_at is null and dc.status = 'CONNECTED'::datacollectorstatus) as should_create_alert,
     true as show,
     now() as created_at,
     d.last_packet_id as packet_id,
@@ -78,12 +80,12 @@ with created_alerts as (
     INSERT INTO alert (type, created_at, packet_id, device_id, data_collector_id, parameters, show)
     SELECT alert_type, created_at, packet_id, device_id, data_collector_id, parameters, show
     FROM dv_to_disconnect
-    WHERE alert_enabled
+    WHERE should_create_alert
     RETURNING *
 )
 -- Add an issue for every alert created
 INSERT INTO quarantine (device_id, alert_id, since, organization_id, last_checked)
-SELECT dtd.device_id, ca.id, ca.created_at, dtd.organization_id, ca.created_at
+SELECT DISTINCT ON (ca.id) dtd.device_id, ca.id, ca.created_at, dtd.organization_id, ca.created_at
 FROM created_alerts ca
     JOIN dv_to_disconnect dtd on ca.device_id = dtd.device_id
 

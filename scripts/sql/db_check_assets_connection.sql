@@ -1,5 +1,5 @@
 -- To ensure that these table names are not in use
-drop table if exists gw_to_disconnect, dv_to_disconnect, created_alerts;
+drop table if exists gw_to_disconnect, dv_to_disconnect, gw_created_alerts, dv_created_alerts;
 
 -- A gateway is considered disconnected if both of these conditions are met:
 --    * It hasn't sent a package for more than 3 minutes
@@ -9,6 +9,7 @@ drop table if exists gw_to_disconnect, dv_to_disconnect, created_alerts;
 SELECT
     DISTINCT ON (g.id, dc.id)
     g.id as gateway_id,
+    g.organization_id as organization_id,
     dc.id as data_collector_id,
     pitem.alert_type_code as alert_type,
     (pitem.enabled and dc.deleted_at is null and dc.status = 'CONNECTED'::datacollectorstatus) as should_create_alert,
@@ -38,10 +39,18 @@ WHERE g.connected and pitem.parameters::jsonb ? 'disconnection_sensitivity' and
     (g.last_activity + CONCAT(GREATEST(180, COALESCE(g.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < now()
 
 -- 2) Add an alert for every gateway that will be disconnected if corresponds
-INSERT INTO alert (type, created_at, packet_id, gateway_id, data_collector_id, parameters, show)
-SELECT alert_type, created_at, packet_id, gateway_id, data_collector_id, parameters, show
-FROM gw_to_disconnect
-WHERE should_create_alert
+with gw_created_alerts as (
+    INSERT INTO alert (type, created_at, packet_id, gateway_id, data_collector_id, parameters, show)
+    SELECT alert_type, created_at, packet_id, gateway_id, data_collector_id, parameters, show
+    FROM gw_to_disconnect
+    WHERE should_create_alert
+    RETURNING *
+)
+-- Add an issue for every alert created
+INSERT INTO quarantine (alert_id, since, organization_id, last_checked)
+SELECT DISTINCT ON (gwca.id) gwca.id, gwca.created_at, gtd.organization_id, gwca.created_at
+FROM gw_created_alerts gwca
+    JOIN gw_to_disconnect gtd on gwca.gateway_id = gtd.gateway_id
 
 -- 3) Disconnect the corresponding gateways
 UPDATE gateway
@@ -89,7 +98,7 @@ WHERE d.connected and pitem.parameters::jsonb ? 'disconnection_sensitivity' and
     (d.last_activity + CONCAT(GREATEST(300, COALESCE(d.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < now()
 
 -- 2) Add an alert for every device that will be disconnected if corresponds
-with created_alerts as (
+with dv_created_alerts as (
     INSERT INTO alert (type, created_at, packet_id, device_id, gateway_id, data_collector_id, parameters, show)
     SELECT alert_type, created_at, packet_id, device_id, gateway_id, data_collector_id, parameters, show
     FROM dv_to_disconnect
@@ -98,9 +107,9 @@ with created_alerts as (
 )
 -- Add an issue for every alert created
 INSERT INTO quarantine (device_id, alert_id, since, organization_id, last_checked)
-SELECT DISTINCT ON (ca.id) dtd.device_id, ca.id, ca.created_at, dtd.organization_id, ca.created_at
-FROM created_alerts ca
-    JOIN dv_to_disconnect dtd on ca.device_id = dtd.device_id
+SELECT DISTINCT ON (dvca.id) dtd.device_id, dvca.id, dvca.created_at, dtd.organization_id, dvca.created_at
+FROM dv_created_alerts dvca
+    JOIN dv_to_disconnect dtd on dvca.device_id = dtd.device_id
 
 -- 3) Disconnect the corresponding devices
 UPDATE device
@@ -108,4 +117,4 @@ SET connected = false
 WHERE id in (select device_id from dv_to_disconnect)
 
 -- Clean temp tables
-drop table if exists gw_to_disconnect, dv_to_disconnect, created_alerts;
+drop table if exists gw_to_disconnect, dv_to_disconnect, gw_created_alerts, dv_created_alerts;

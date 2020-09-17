@@ -37,7 +37,11 @@ set type = 'LAF-600',
 	resolved_at = null,
 	resolved_by_id = null,
 	resolution_comment = null,
-	parameters = (jsonb_build_object('alert_solved', at.name, 'resolution_reason', 'A considerable amount of time passed without this problem being detected again') ||
+	parameters = (jsonb_build_object(
+					'alert_solved_type', at.code,
+					'alert_solved', at.name,
+					'resolution_reason', 'A considerable amount of time passed without this problem being detected again'
+					) ||
 				  atr.parameters::jsonb)::varchar,
 	show = true
 from alert_type at

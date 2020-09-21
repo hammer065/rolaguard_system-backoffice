@@ -35,8 +35,10 @@ FROM gateway g
     JOIN data_collector dc on g.data_collector_id = dc.id
     JOIN policy_item pitem on pitem.alert_type_code = 'LAF-403' and dc.policy_id = pitem.policy_id
     JOIN policy p on p.id = pitem.policy_id
+    JOIN row_processed rp on rp.analyzer = 'packet_analyzer'
+    JOIN packet proc_pck on proc_pck.id = rp.last_row
 WHERE g.connected and pitem.parameters::jsonb ? 'disconnection_sensitivity' and
-    (g.last_activity + CONCAT(GREATEST(180, COALESCE(g.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < now()
+    (g.last_activity + CONCAT(GREATEST(180, COALESCE(g.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < proc_pck.date
 
 -- 2) Add an alert for every gateway that will be disconnected if corresponds
 with gw_created_alerts as (
@@ -94,8 +96,10 @@ FROM device d
     JOIN policy p on p.id = pitem.policy_id
     JOIN packet pck on pck.id = d.last_packet_id
     JOIN gateway g on g.data_collector_id = dc.id and g.gw_hex_id = pck.gateway
+    JOIN row_processed rp on rp.analyzer = 'packet_analyzer'
+    JOIN packet proc_pck on proc_pck.id = rp.last_row
 WHERE d.connected and pitem.parameters::jsonb ? 'disconnection_sensitivity' and
-    (d.last_activity + CONCAT(GREATEST(300, COALESCE(d.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < now()
+    (d.last_activity + CONCAT(GREATEST(300, COALESCE(d.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < proc_pck.date
 
 -- 2) Add an alert for every device that will be disconnected if corresponds
 with dv_created_alerts as (

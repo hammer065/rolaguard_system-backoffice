@@ -2,7 +2,7 @@
 drop table if exists gw_to_disconnect, dv_to_disconnect, gw_created_alerts, dv_created_alerts;
 
 -- A gateway is considered disconnected if both of these conditions are met:
---    * It hasn't sent a package for more than 3 minutes
+--    * It hasn't sent a package for more than 30 minutes
 --    * It hasn't sent a package for more than (1/disconnection_sensitivity) times it's 
 --      usual period, where disconnection_sensitivity is a configurable policy parameter
 -- 1) Get gateways to disconnect and the data needed to create the corresponding alerts
@@ -38,7 +38,7 @@ FROM gateway g
     JOIN row_processed rp on rp.analyzer = 'packet_analyzer'
     JOIN packet proc_pck on proc_pck.id = rp.last_row
 WHERE g.connected and pitem.parameters::jsonb ? 'disconnection_sensitivity' and
-    (g.last_activity + CONCAT(GREATEST(180, COALESCE(g.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < proc_pck.date
+    (g.last_activity + CONCAT(GREATEST(1800, COALESCE(g.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < proc_pck.date
 
 -- 2) Add an alert for every gateway that will be disconnected if corresponds
 with gw_created_alerts as (
@@ -60,7 +60,7 @@ SET connected = false
 WHERE id in (select gateway_id from gw_to_disconnect)
 
 -- A device is considered disconnected if both of these conditions are met:
---    * It hasn't sent a package for more than 5 minutes
+--    * It hasn't sent a package for more than 30 minutes
 --    * It hasn't sent a package for more than (1/disconnection_sensitivity) times it's 
 --      usual period, where disconnection_sensitivity is a configurable policy parameter
 -- 1) Get devices to disconnect and the data needed to create the corresponding alerts
@@ -99,7 +99,7 @@ FROM device d
     JOIN row_processed rp on rp.analyzer = 'packet_analyzer'
     JOIN packet proc_pck on proc_pck.id = rp.last_row
 WHERE d.connected and pitem.parameters::jsonb ? 'disconnection_sensitivity' and
-    (d.last_activity + CONCAT(GREATEST(300, COALESCE(d.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < proc_pck.date
+    (d.last_activity + CONCAT(GREATEST(1800, COALESCE(d.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < proc_pck.date
 
 -- 2) Add an alert for every device that will be disconnected if corresponds
 with dv_created_alerts as (

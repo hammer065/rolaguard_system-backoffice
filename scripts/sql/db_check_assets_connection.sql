@@ -37,8 +37,17 @@ FROM gateway g
     JOIN policy p on p.id = pitem.policy_id
     JOIN row_processed rp on rp.analyzer = 'packet_analyzer'
     JOIN packet proc_pck on proc_pck.id = rp.last_row
-WHERE g.connected and pitem.parameters::jsonb ? 'disconnection_sensitivity' and
-    (g.last_activity + CONCAT(GREATEST(1800, COALESCE(g.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < proc_pck.date
+WHERE g.connected and 
+    pitem.parameters::jsonb ? 'disconnection_sensitivity' and
+    pitem.parameters::jsonb ? 'min_activity_period' and
+    (g.last_activity + CONCAT(
+        GREATEST(
+            (pitem.parameters::json->>'min_activity_period')::numeric,
+            COALESCE(g.activity_freq,0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))
+                ::text,
+        ' seconds')
+            ::interval)
+    < proc_pck.date
 
 -- 2) Add an alert for every gateway that will be disconnected if corresponds
 with gw_created_alerts as (
@@ -98,8 +107,17 @@ FROM device d
     JOIN gateway g on g.data_collector_id = dc.id and g.gw_hex_id = pck.gateway
     JOIN row_processed rp on rp.analyzer = 'packet_analyzer'
     JOIN packet proc_pck on proc_pck.id = rp.last_row
-WHERE d.connected and pitem.parameters::jsonb ? 'disconnection_sensitivity' and
-    (d.last_activity + CONCAT(GREATEST(1800, COALESCE(d.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))::text, ' seconds')::interval) < proc_pck.date
+WHERE d.connected and
+    pitem.parameters::jsonb ? 'disconnection_sensitivity' and
+    pitem.parameters::jsonb ? 'min_activity_period' and
+    (d.last_activity + CONCAT(
+        GREATEST(
+            (pitem.parameters::json->>'min_activity_period')::numeric,
+            COALESCE(d.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))
+                ::text,
+        ' seconds')
+            ::interval)
+    < proc_pck.date
 
 -- 2) Add an alert for every device that will be disconnected if corresponds
 with dv_created_alerts as (

@@ -80,7 +80,14 @@ SELECT
     d.organization_id as organization_id,
     dc.id as data_collector_id,
     pitem.alert_type_code as alert_type,
-    (pitem.enabled and dc.deleted_at is null and dc.status = 'CONNECTED'::datacollectorstatus) as should_create_alert,
+    (pitem.enabled and
+        dc.deleted_at is null and 
+        dc.status = 'CONNECTED'::datacollectorstatus and
+        pitem.parameters::jsonb ? 'deviation_tolerance' and
+        d.activity_freq is not NULL and
+        d.activity_freq != 0 and
+        sqrt(d.activity_freq_variance)/d.activity_freq <= (pitem.parameters::json->>'deviation_tolerance')::numeric
+    ) as should_create_alert,
     true as show,
     now() as created_at,
     d.last_packet_id as packet_id,

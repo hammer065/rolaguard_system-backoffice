@@ -9,8 +9,12 @@ from packet
 where date < current_date - interval '30 day'
 
 delete
-from packet
-where date < current_date - interval '30 day'
+from packet p
+where p.id in (
+	select packet.id from packet
+	where date < current_date - interval '30 day'
+	limit 1000000
+);
 
 set maintenance_work_mem='4 GB';
 

@@ -16,14 +16,6 @@ where p.id in (
 	limit 1000000
 );
 
-set maintenance_work_mem='4 GB';
-
-show maintenance_work_mem;
-
-SET lock_timeout TO '60min';
-
-vacuum (verbose, full) packet;
-
 select c.oid::regclass as packet,
 pg_size_pretty(pg_table_size(c.oid)) as table_size
 from pg_class c

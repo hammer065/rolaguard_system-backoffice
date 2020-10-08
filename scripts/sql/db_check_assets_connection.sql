@@ -18,13 +18,16 @@ SELECT
     g.last_packet_id as packet_id,
     json_build_object(
         'packet_id', g.last_packet_id,
-        'gateway', g.gw_hex_id,
-        'gw_name', g.name,
-        'gw_vendor', g.vendor,
+        'packet_date', to_char(pck.date, 'YYYY-MM-DD HH24:MI:SS TZ'),
+        'packet_data', row_to_json(pck),
+        'created_at', now(),
         'dev_eui', null,
         'dev_name', null,
         'dev_vendor', null,
         'dev_addr', null,
+        'gateway', g.gw_hex_id,
+        'gw_name', g.name,
+        'gw_vendor', g.vendor,
         'last_activity', g.last_activity,
         'activity_freq', g.activity_freq,
         'policy_name', p.name,
@@ -35,6 +38,7 @@ FROM gateway g
     JOIN data_collector dc on g.data_collector_id = dc.id
     JOIN policy_item pitem on pitem.alert_type_code = 'LAF-403' and dc.policy_id = pitem.policy_id
     JOIN policy p on p.id = pitem.policy_id
+    JOIN packet pck on pck.id = g.last_packet_id
     JOIN row_processed rp on rp.analyzer = 'packet_analyzer'
     JOIN packet proc_pck on proc_pck.id = rp.last_row
 WHERE g.connected and 
@@ -80,26 +84,22 @@ SELECT
     d.organization_id as organization_id,
     dc.id as data_collector_id,
     pitem.alert_type_code as alert_type,
-    (pitem.enabled and
-        dc.deleted_at is null and 
-        dc.status = 'CONNECTED'::datacollectorstatus and
-        pitem.parameters::jsonb ? 'deviation_tolerance' and
-        d.activity_freq is not NULL and
-        d.activity_freq != 0 and
-        sqrt(d.activity_freq_variance)/d.activity_freq <= (pitem.parameters::json->>'deviation_tolerance')::numeric
-    ) as should_create_alert,
+    (pitem.enabled and dc.deleted_at is null and dc.status = 'CONNECTED'::datacollectorstatus) as should_create_alert,
     true as show,
     now() as created_at,
     d.last_packet_id as packet_id,
     json_build_object(
         'packet_id', d.last_packet_id,
-        'gateway', g.gw_hex_id,
-        'gw_name', g.name,
-        'gw_vendor', g.vendor,
+        'packet_date', to_char(pck.date, 'YYYY-MM-DD HH24:MI:SS TZ'),
+        'packet_data', row_to_json(pck),
+        'created_at', now(),
         'dev_eui', d.dev_eui,
         'dev_name', d.name,
         'dev_vendor', d.vendor,
         'dev_addr', null,
+        'gateway', g.gw_hex_id,
+        'gw_name', g.name,
+        'gw_vendor', g.vendor,
         'last_activity', d.last_activity,
         'activity_freq', d.activity_freq,
         'policy_name', p.name,
@@ -117,14 +117,33 @@ FROM device d
 WHERE d.connected and
     pitem.parameters::jsonb ? 'disconnection_sensitivity' and
     pitem.parameters::jsonb ? 'min_activity_period' and
-    (d.last_activity + CONCAT(
-        GREATEST(
-            (pitem.parameters::json->>'min_activity_period')::numeric,
-            COALESCE(d.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric))
-                ::text,
-        ' seconds')
-            ::interval)
-    < proc_pck.date
+    (
+        (   -- For regular devices, consider only the median between packets
+            (not (pitem.parameters::jsonb ? 'deviation_tolerance') or
+                d.activity_freq is NULL or
+                d.activity_freq = 0 or
+                sqrt(d.activity_freq_variance)/d.activity_freq <= (pitem.parameters::json->>'deviation_tolerance')::numeric) and
+            (d.last_activity + CONCAT(
+                GREATEST(
+                    (pitem.parameters::json->>'min_activity_period')::numeric,
+                    COALESCE(d.activity_freq, 0)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric)
+                )::text,' seconds'
+            )::interval) < proc_pck.date
+        )
+        or
+        (   --For irregular devices, consider median + deviation
+            pitem.parameters::jsonb ? 'deviation_tolerance' and
+            d.activity_freq is not NULL and
+            d.activity_freq != 0 and
+            sqrt(d.activity_freq_variance)/d.activity_freq > (pitem.parameters::json->>'deviation_tolerance')::numeric and
+            (d.last_activity + CONCAT(
+                GREATEST(
+                    (pitem.parameters::json->>'min_activity_period')::numeric,
+                    (sqrt(d.activity_freq_variance)+d.activity_freq)/((pitem.parameters::json->>'disconnection_sensitivity')::numeric)
+                )::text,' seconds'
+            )::interval) < proc_pck.date
+        )
+    )
 
 -- 2) Add an alert for every device that will be disconnected if corresponds
 with dv_created_alerts as (

@@ -27,6 +27,9 @@ into unq_alerts_to_remove
 from alert a
 where a.id in (select id from alerts_id);
 
+-- Remove 'packet_data' from parameters
+UPDATE unq_alerts_to_remove SET parameters = (parameters::jsonb - 'packet_data')::varchar;
+
 -- Modify some fields of the copy of the alerts
 update unq_alerts_to_remove atr
 set type = 'LAF-600',

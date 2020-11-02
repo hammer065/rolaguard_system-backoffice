@@ -14,7 +14,7 @@ from packet p
 where p.id in (
 	select packet.id from packet
 	where date < current_date - interval '30 day'
-	limit 2000000
+	limit 3600000
 );
 
 

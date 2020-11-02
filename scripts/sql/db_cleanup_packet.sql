@@ -6,8 +6,7 @@ where c.relkind = 'r' and c.relname = 'packet';
 
 select to_char(min(date), 'YYYY-MM-DD HH12:MI:SS') as delete_from, to_char(max(date), 'YYYY-MM-DD HH12:MI:SS') as delete_to, cast(count(1) as varchar(12)) as rows
 from packet
-                                                                                                                                                      
-where date < current_date - interval '30 day'
+where date < current_date - interval '30 day';
 
 delete
 from packet p

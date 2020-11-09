@@ -14,7 +14,7 @@ echo "DB_PASSWORD=$DB_PASSWORD" >> /etc/crontab
 echo '0 23 * * * /usr/local/bin/python /iot_home/pg_admin.py /iot_home/scripts/sql/db_cleanup_packet.sql >> /iot_home/crontab.log' >> /etc/crontab
 echo '15 * * * * /usr/local/bin/python /iot_home/pg_admin.py /iot_home/scripts/sql/db_health_status.sql >> /iot_home/crontab.log' >> /etc/crontab
 echo '*/2 * * * * /usr/local/bin/python /iot_home/pg_admin.py /iot_home/scripts/sql/db_sp_populate_stats_counters.sql >> /iot_home/crontab.log' >> /etc/crontab
-echo '15,45 * * * * /usr/local/bin/python /iot_home/pg_admin.py /iot_home/scripts/sql/db_resolve_quarantine.sql >> /iot_home/crontab.log' >> /etc/crontab
+echo '0,10,20,30,40,50 * * * * /usr/local/bin/python /iot_home/pg_admin.py /iot_home/scripts/sql/db_resolve_quarantine.sql >> /iot_home/crontab.log' >> /etc/crontab
 echo '*/5 * * * * /usr/local/bin/python /iot_home/pg_admin.py /iot_home/scripts/sql/db_check_assets_connection.sql >> /iot_home/crontab.log' >> /etc/crontab
 
 crontab -u root /etc/crontab

@@ -7,9 +7,18 @@ into unq_to_remove
 from quarantine q
   join alert a on q.alert_id = a.id
   join alert_type atype on a.type = atype.code
-where q.resolved_at is null
-  and atype.quarantine_timeout > 0
-  and q.last_checked+atype.quarantine_timeout * interval '1 second' < current_timestamp;
+  join device d on a.device_id = d.id
+where 
+	q.resolved_at is null and
+	((
+		atype.quarantine_npackets_timeout > 0 and
+		atype.for_asset_type = 'DEVICE' and
+		d.activity_freq is not null and
+		q.last_checked + atype.quarantine_npackets_timeout * (d.activity_freq + 2 * d.activity_freq_variance) * interval '1 second' < current_timestamp
+	) or (
+		atype.quarantine_timeout > 0 and
+		q.last_checked + atype.quarantine_timeout * interval '1 second' < current_timestamp
+	));
 
 -- Resolve the quarantines
 update quarantine

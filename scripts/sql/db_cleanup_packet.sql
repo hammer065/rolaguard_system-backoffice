@@ -19,7 +19,7 @@ delete from device_session ds
 where ds.id in (
 	select ds.id from device_session ds
 	where current_date - ds.last_activity > interval '60' day
-	limit 100
+	limit 200
 );
 
 select c.oid::regclass as packet,

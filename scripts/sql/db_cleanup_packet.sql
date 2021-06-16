@@ -16,14 +16,14 @@ delete from packet p
 where p.id in (
 	select packet.id from packet
 	where date < current_date - interval '30 day'
-	limit 3600000
+	limit 5000000
 );
 
 delete from device_session ds
 where ds.id in (
 	select ds.id from device_session ds
 	where current_date - ds.last_activity > interval '60' day
-	limit 200
+	limit 500
 );
 
 select c.oid::regclass as packet,

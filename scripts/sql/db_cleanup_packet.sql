@@ -4,9 +4,13 @@ from pg_class c
 left join pg_class t on c.reltoastrelid = t.oid
 where c.relkind = 'r' and c.relname = 'packet';
 
-select to_char(min(date), 'YYYY-MM-DD HH12:MI:SS') as delete_from, to_char(max(date), 'YYYY-MM-DD HH12:MI:SS') as delete_to, cast(count(1) as varchar(12)) as rows
-from packet
-where date < current_date - interval '30 day';
+
+delete from data_collector_log_event dcle
+where dcle.id in (
+	select dcle.id from data_collector_log_event dcle
+	where dcle.created_at < current_date - interval '30 day'
+	limit 10000000
+);
 
 delete from packet p
 where p.id in (

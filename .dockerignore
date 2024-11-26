@@ -6,3 +6,6 @@ Dockerfile
 .dockerignore
 *.y*l
 database.ini
+.github
+VERSION
+LICENSE
